@@ -1,7 +1,11 @@
 from sqlmodel import Session, select, text, text
 
+from app.api.services.embedding_service import EmbeddingService
+from app.api.services.vector_service import VectorService
 from app.core.security import hash_password
 from app.db import session
+from app.models import document
+from app.models import document
 from app.models.organization import Organization
 from app.models.user import User
 from app.models.document import Document
@@ -12,6 +16,8 @@ from PIL import Image
 import io
 
 
+embedding_service = EmbeddingService()
+vector_service = VectorService()
 
 class DocumentService :
     
@@ -103,3 +109,54 @@ class DocumentService :
 
         return chunks 
         
+        
+    def document_process(self, document: Document, session: Session):
+
+        try:
+            document.status = "processing"
+            session.add(document)
+            session.commit()
+
+
+            text = self.extract_pdf_text(
+                storage_ref=document.storage_ref
+            )
+
+            chunks = self.chunk_text(
+                text=text,
+                chunk_size=1000,
+                overlap=200
+            )
+
+
+            for index, chunk in enumerate(chunks):
+
+                vector = embedding_service.create_embedding(
+                    text=chunk
+                )
+
+                vector_service.store_vector(
+                    vector=vector,
+                    document_id=document.id,
+                    org_id=document.org_id,
+                    chunk_index=index,
+                    text=chunk
+                )
+
+
+            document.status = "completed"
+            session.add(document)
+            session.commit()
+            session.refresh(document)
+
+
+        except Exception as e:
+
+            document.status = "failed"
+            document.error = str(e)
+
+            session.add(document)
+            session.commit()
+
+            raise e
+    

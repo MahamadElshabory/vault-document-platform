@@ -18,4 +18,7 @@ class Settings(BaseSettings):
     )
 
 
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6333
+
 settings = Settings()
