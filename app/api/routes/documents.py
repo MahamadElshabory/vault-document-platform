@@ -8,6 +8,8 @@ from app.schemas.search import SearchRequest
 from app.models.user import User
 from app.core.security import create_access_token, verify_password
 from app.api.dependencies import get_current_user, require_org_scope
+from app.api.services.llm.base import LLMProvider
+from app.api.services.llm.factory import get_llm_provider
 
 from pathlib import Path
 from uuid import uuid4
@@ -27,6 +29,7 @@ router = APIRouter(
 document_service = DocumentService()
 embedding_service = EmbeddingService()
 vector_service = VectorService()
+llm_provider = get_llm_provider()
 
 
 UPLOAD_DIR = Path("uploads")
@@ -80,7 +83,7 @@ def upload_document(
         session=session
     )
 
-
+    
     return {
         "document_id": document.id,
         "filename": document.filename,
@@ -143,20 +146,40 @@ def search_documents(
     current_user: User = Depends(get_current_user)
 ):
 
-    # Convert user question into vector
+    # 1. Convert question into a vector
     query_vector = embedding_service.create_embedding(
         text=request.query
     )
 
-
-    # Search Qdrant
+    # 2. Search only the current user's organization
     search_results = vector_service.search_vectors(
         vector=query_vector,
         org_id=current_user.org_id
     )
 
+    # 3. No relevant documents found
+    if not search_results:
+        return {
+            "query": request.query,
+            "answer": "I couldn't find the answer in the provided documents.",
+            "sources": []
+        }
 
+    # 4. Extract text from retrieved chunks
+    context = [
+        result["text"]
+        for result in search_results
+    ]
+
+    # 5. Generate answer using the retrieved context
+    answer = llm_provider.generate_answer(
+        question=request.query,
+        context=context
+    )
+
+    # 6. Return answer + sources
     return {
         "query": request.query,
-        "results": search_results
+        "answer": answer,
+        "sources": search_results
     }
