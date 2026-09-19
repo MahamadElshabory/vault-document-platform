@@ -10,7 +10,8 @@ from app.core.security import create_access_token, verify_password
 from app.api.dependencies import get_current_user, require_org_scope
 from app.api.services.llm.base import LLMProvider
 from app.api.services.llm.factory import get_llm_provider
-
+from time import perf_counter
+from app.core.metrics import query_latency
 from pathlib import Path
 from uuid import uuid4
 import shutil
@@ -139,6 +140,35 @@ def get_document_text(
 
 
 
+@router.get("/{document_id}/status")
+def get_document_status(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db)
+):
+
+    document = session.get(Document, document_id)
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+
+    if document.org_id != current_user.org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to this document is forbidden"
+        )
+
+    return {
+        "document_id": document.id,
+        "status": document.status,
+        "error": document.error
+    }
+    
+    
+
 
 @router.post("/search")
 def search_documents(
@@ -146,40 +176,50 @@ def search_documents(
     current_user: User = Depends(get_current_user)
 ):
 
-    # 1. Convert question into a vector
-    query_vector = embedding_service.create_embedding(
-        text=request.query
-    )
+    start_time = perf_counter()
 
-    # 2. Search only the current user's organization
-    search_results = vector_service.search_vectors(
-        vector=query_vector,
-        org_id=current_user.org_id
-    )
+    try:
+            
+        # 1. Convert question into a vector
+        query_vector = embedding_service.create_embedding(
+            text=request.query
+        )
 
-    # 3. No relevant documents found
-    if not search_results:
+        # 2. Search only the current user's organization
+        search_results = vector_service.search_vectors(
+            vector=query_vector,
+            org_id=current_user.org_id
+        )
+
+        # 3. No relevant documents found
+        if not search_results:
+            return {
+                "query": request.query,
+                "answer": "I couldn't find the answer in the provided documents.",
+                "sources": []
+            }
+
+        # 4. Extract text from retrieved chunks
+        context = [
+            result["text"]
+            for result in search_results
+        ]
+
+        # 5. Generate answer using the retrieved context
+        answer = llm_provider.generate_answer(
+            question=request.query,
+            context=context
+        )
+
+        # 6. Return answer + sources
         return {
             "query": request.query,
-            "answer": "I couldn't find the answer in the provided documents.",
-            "sources": []
+            "answer": answer,
+            "sources": search_results
         }
+        
+    finally:
+        
+        duration = perf_counter() - start_time
 
-    # 4. Extract text from retrieved chunks
-    context = [
-        result["text"]
-        for result in search_results
-    ]
-
-    # 5. Generate answer using the retrieved context
-    answer = llm_provider.generate_answer(
-        question=request.query,
-        context=context
-    )
-
-    # 6. Return answer + sources
-    return {
-        "query": request.query,
-        "answer": answer,
-        "sources": search_results
-    }
+        query_latency.observe(duration)

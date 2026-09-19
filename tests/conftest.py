@@ -7,16 +7,15 @@ from sqlmodel import SQLModel, Session, create_engine
 from app.main import app
 from app.db.session import get_db
 
-# Import models so SQLModel knows about them
 from app.models.user import User
 from app.models.organization import Organization
+from app.models.document import Document
 
 
 @pytest.fixture
-def client():
+def test_engine():
 
-    # Temporary database used only for testing
-    test_engine = create_engine(
+    engine = create_engine(
         "sqlite://",
         connect_args={
             "check_same_thread": False
@@ -24,11 +23,16 @@ def client():
         poolclass=StaticPool
     )
 
-    # Create the tables inside the temporary database
-    SQLModel.metadata.create_all(test_engine)
+    SQLModel.metadata.create_all(engine)
 
-    # Replace the real PostgreSQL connection
-    # with the test database connection
+    yield engine
+
+    SQLModel.metadata.drop_all(engine)
+
+
+@pytest.fixture
+def client(test_engine):
+
     def override_get_db():
 
         with Session(test_engine) as session:
@@ -36,11 +40,14 @@ def client():
 
     app.dependency_overrides[get_db] = override_get_db
 
-    # Create a fake client that can call our FastAPI routes
     with TestClient(app) as test_client:
         yield test_client
 
-    # Clean everything after the test
     app.dependency_overrides.clear()
 
-    SQLModel.metadata.drop_all(test_engine)
+
+@pytest.fixture
+def db_session(test_engine):
+
+    with Session(test_engine) as session:
+        yield session

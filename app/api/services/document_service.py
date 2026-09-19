@@ -1,5 +1,6 @@
 from sqlmodel import Session, select, text, text
-
+from app.core.metrics import (ingestion_duration,ingestion_failures,)
+from time import perf_counter
 from app.api.services.embedding_service import EmbeddingService
 from app.api.services.vector_service import VectorService
 from app.core.security import hash_password
@@ -112,6 +113,8 @@ class DocumentService :
         
     def document_process(self, document: Document, session: Session):
 
+        start_time = perf_counter()
+        
         try:
             document.status = "processing"
             session.add(document)
@@ -151,6 +154,8 @@ class DocumentService :
 
 
         except Exception as e:
+            
+            ingestion_failures.inc()
 
             document.status = "failed"
             document.error = str(e)
@@ -160,3 +165,7 @@ class DocumentService :
 
             raise e
     
+        finally:
+            duration = perf_counter() - start_time
+
+            ingestion_duration.observe(duration)
