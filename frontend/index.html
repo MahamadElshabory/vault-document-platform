@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Vault</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <h1>Vault</h1>
+
+        <p class="subtitle">
+            Secure Document Intelligence
+        </p>
+
+        <nav>
+            <button onclick="showPage('dashboard')">
+                Dashboard
+            </button>
+
+            <button onclick="showPage('documents')">
+                Documents
+            </button>
+
+            <button onclick="showPage('ask')">
+                Ask Vault
+            </button>
+        </nav>
+
+        <button class="logout" onclick="logout()">
+            Logout
+        </button>
+
+    </aside>
+
+
+    <!-- Main Content -->
+    <main class="main">
+
+        <!-- Login -->
+        <section id="loginPage" class="auth-page">
+
+            <div class="auth-card">
+
+                <h2>Welcome to Vault</h2>
+
+                <p>
+                    Sign in to your document intelligence platform.
+                </p>
+
+                <input
+                    id="loginEmail"
+                    type="email"
+                    placeholder="Email"
+                >
+
+                <input
+                    id="loginPassword"
+                    type="password"
+                    placeholder="Password"
+                >
+
+                <button onclick="login()">
+                    Login
+                </button>
+
+                <p id="loginMessage"></p>
+
+                <hr>
+
+                <p>
+                    Don't have an account?
+                </p>
+
+                <button
+                    class="secondary"
+                    onclick="showSignup()"
+                >
+                    Create Account
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- Signup -->
+        <section id="signupPage" class="auth-page hidden">
+
+            <div class="auth-card">
+
+                <h2>Create your Vault account</h2>
+
+                <input
+                    id="signupName"
+                    type="text"
+                    placeholder="Name"
+                >
+
+                <input
+                    id="signupEmail"
+                    type="email"
+                    placeholder="Email"
+                >
+
+                <input
+                    id="signupPassword"
+                    type="password"
+                    placeholder="Password"
+                >
+
+                <input
+                    id="signupOrganization"
+                    type="text"
+                    placeholder="Organization"
+                >
+
+                <button onclick="signup()">
+                    Create Account
+                </button>
+
+                <p id="signupMessage"></p>
+
+                <button
+                    class="secondary"
+                    onclick="showLogin()"
+                >
+                    Back to Login
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- Dashboard -->
+        <section id="dashboardPage" class="page hidden">
+
+            <div class="topbar">
+                <div>
+                    <h2>Dashboard</h2>
+                    <p>Your Vault workspace</p>
+                </div>
+            </div>
+
+            <div class="cards">
+
+                <div class="card">
+                    <span>Platform</span>
+                    <strong>Vault</strong>
+                </div>
+
+                <div class="card">
+                    <span>Backend</span>
+                    <strong>FastAPI</strong>
+                </div>
+
+                <div class="card">
+                    <span>Vector Database</span>
+                    <strong>Qdrant</strong>
+                </div>
+
+                <div class="card">
+                    <span>Task Queue</span>
+                    <strong>Celery + Redis</strong>
+                </div>
+
+            </div>
+
+            <div class="panel">
+
+                <h3>Current User</h3>
+
+                <pre id="userInfo">Loading...</pre>
+
+            </div>
+
+        </section>
+
+
+        <!-- Documents -->
+        <section id="documentsPage" class="page hidden">
+
+            <div class="topbar">
+
+                <div>
+                    <h2>Documents</h2>
+                    <p>Upload and process your documents.</p>
+                </div>
+
+            </div>
+
+
+            <div class="panel">
+
+                <h3>Upload Document</h3>
+
+                <input
+                    id="documentFile"
+                    type="file"
+                >
+
+                <button onclick="uploadDocument()">
+                    Upload
+                </button>
+
+                <p id="uploadMessage"></p>
+
+            </div>
+
+
+            <div class="panel">
+
+                <h3>Document</h3>
+
+                <input
+                    id="documentId"
+                    type="number"
+                    placeholder="Document ID"
+                >
+
+                <button onclick="getDocumentStatus()">
+                    Check Status
+                </button>
+
+                <button
+                    class="secondary"
+                    onclick="getDocumentText()"
+                >
+                    Get Text
+                </button>
+
+                <pre id="documentResult"></pre>
+
+            </div>
+
+        </section>
+
+
+        <!-- Ask Vault -->
+        <section id="askPage" class="page hidden">
+
+            <div class="topbar">
+
+                <div>
+                    <h2>Ask Vault</h2>
+                    <p>Ask questions about your documents.</p>
+                </div>
+
+            </div>
+
+            <div class="panel">
+
+                <textarea
+                    id="question"
+                    placeholder="Ask something about your documents..."
+                ></textarea>
+
+                <button onclick="askVault()">
+                    Ask Vault
+                </button>
+
+                <div
+                    id="answer"
+                    class="answer"
+                >
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
